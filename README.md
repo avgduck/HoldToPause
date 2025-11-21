@@ -1,4 +1,4 @@
-﻿# [HoldToPause](https://thunderstore.io/c/lethal-league-blaze/p/avg_duck/HoldToPause/)
+# [HoldToPause](https://thunderstore.io/c/lethal-league-blaze/p/avg_duck/HoldToPause/)
 
 Adds a hold timer for the pause button to prevent accidental pausing in tournament situations, as well as text indicating which player paused.
 

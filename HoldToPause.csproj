@@ -48,9 +48,6 @@
 
     <ItemGroup>
         <_ReleaseFiles Include="Thunderstore\icon.png" />
-        <_ReleaseFiles Include="Thunderstore\manifest.json" />
-        <_ReleaseFiles Include="README.md" />
-        <_ReleaseFiles Include="CHANGELOG.md" />
     </ItemGroup>
 
     <Target Name="PostBuild" AfterTargets="PostBuildEvent">

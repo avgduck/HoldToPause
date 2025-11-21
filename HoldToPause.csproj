@@ -41,6 +41,10 @@
       </Reference>
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="assets\" />
+    </ItemGroup>
+
     <Target Name="PostBuild" AfterTargets="PostBuildEvent">
         <Copy SourceFiles="bin\Debug\net35\HoldToPause.dll" DestinationFolder="build" />
 
@@ -48,5 +52,10 @@
             <_BuildFiles Include="build\*.*" />
         </ItemGroup>
         <Copy SourceFiles="@(_BuildFiles)" DestinationFolder="C:\Users\Owner\AppData\Roaming\r2modmanPlus-local\LethalLeagueBlaze\profiles\Dev\BepInEx\plugins\HoldToPause" />
+
+        <ItemGroup>
+            <_AssetFiles Include="assets\*.*" />
+        </ItemGroup>
+        <Copy SourceFiles="@(_AssetFiles)" DestinationFolder="C:\Users\Owner\AppData\Roaming\r2modmanPlus-local\LethalLeagueBlaze\profiles\Dev\BepInEx\plugins\HoldToPause\assets" />
     </Target>
 </Project>

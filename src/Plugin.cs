@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Reflection.Emit;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
+using LLBML.Bundles;
 using LLBML.Players;
 using LLBML.States;
 using LLBML.Utils;
@@ -13,6 +16,7 @@ using LLHandlers;
 using LLScreen;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 using Object = System.Object;
 
 namespace HoldToPause;
@@ -31,6 +35,10 @@ public class Plugin : BaseUnityPlugin
     private float[] pauseTimers;
     private bool pauseAllowed;
     private int pausePlayer;
+    private Sprite spritePauseProgress;
+    private Image imgPauseProgress;
+    private Sprite spritePauseIcon;
+    private Image imgPauseIcon;
 
     private void Awake()
     {
@@ -45,12 +53,55 @@ public class Plugin : BaseUnityPlugin
         pausePlayer = -1;
         pauseTimers = new float[4];
         Harmony harmony = Harmony.CreateAndPatchAll(typeof(Plugin));
+
+        spritePauseProgress = Sprite.Create(CreateCircleTexture(Color.white, new Color(0.08f, 0.08f, 0.08f), 256, 256, 128, 128, 96, 128, 4), new Rect(0, 0, 256, 256), new Vector2(0.5f, 0.5f));
+
+        DirectoryInfo assetsDirectory = new DirectoryInfo(Path.Combine(Path.GetDirectoryName(Info.Location), "assets"));
+        FileInfo pauseIconFile = assetsDirectory.GetFiles().First();
+        byte[] fileData = File.ReadAllBytes(pauseIconFile.FullName);
+        Texture2D texPauseIcon = new Texture2D(122, 132);
+        texPauseIcon.LoadImage(fileData);
+        spritePauseIcon = Sprite.Create(texPauseIcon, new Rect(0, 0, 122, 132), new Vector2(0.5f, 0.5f));
+    }
+    
+    private static Texture2D CreateCircleTexture(Color mainColor, Color borderColor, int width, int height, int centerX, int centerY, int innerRadius, int outerRadius, int borderWidth)
+    {
+        Texture2D tex = new Texture2D(width, height);
+
+        float rSquaredInner = innerRadius * innerRadius;
+        float rSquaredInnerBorder = (innerRadius + borderWidth) * (innerRadius + borderWidth);
+        float rSquaredOuter = outerRadius * outerRadius;
+        float rSquaredOuterBorder = (outerRadius - borderWidth) * (outerRadius - borderWidth);
+
+        for (int x = centerX - outerRadius; x <= centerX + outerRadius; x++)
+        {
+            for (int y = centerY - outerRadius; y <= centerY + outerRadius; y++)
+            {
+                float squareDist = (centerX - x) * (centerX - x) + (centerY - y) * (centerY - y);
+                if ((squareDist > rSquaredInner && squareDist < rSquaredInnerBorder) || (squareDist > rSquaredOuterBorder && squareDist < rSquaredOuter))
+                {
+                    tex.SetPixel(x, y, borderColor);
+                }
+                else if (squareDist > rSquaredInnerBorder && squareDist < rSquaredOuterBorder)
+                {
+                    tex.SetPixel(x, y, mainColor);
+                }
+                else
+                {
+                    tex.SetPixel(x, y, Color.clear);
+                }
+            }
+        }
+
+        tex.Apply();
+        
+        return tex;
     }
 
     private void Update()
     {
         //if (GameStates.GetCurrent() != GameState.GAME || !pauseAllowed) return;
-        LogGlobal.LogInfo($"pausePlayer {pausePlayer}, pauseTimers {PrintArray(pauseTimers)}");
+        //LogGlobal.LogInfo($"pausePlayer {pausePlayer}, pauseTimers {PrintArray(pauseTimers)}");
     }
 
     private void ResetPauseTimers()
@@ -77,9 +128,30 @@ public class Plugin : BaseUnityPlugin
     
     [HarmonyPatch(typeof(ScreenGameHud), nameof(ScreenGameHud.OnOpen))]
     [HarmonyPostfix]
-    private static void ScreenGameHud_OnOpen_Postfix()
+    private static void ScreenGameHud_OnOpen_Postfix(ScreenGameHud __instance)
     {
         Instance.ResetPauseTimers();
+
+        Instance.imgPauseProgress = new GameObject("imgPauseProgress").AddComponent<Image>();
+        Instance.imgPauseProgress.sprite = Instance.spritePauseProgress;
+        Instance.imgPauseProgress.color = new Color(1f, 1f, 1f, 1f);
+        Instance.imgPauseProgress.type = Image.Type.Filled;
+        Instance.imgPauseProgress.fillMethod = Image.FillMethod.Radial360;
+        Instance.imgPauseProgress.fillClockwise = true;
+        Instance.imgPauseProgress.fillOrigin = (int)Image.Origin360.Top;
+        Instance.imgPauseProgress.rectTransform.SetParent(__instance.transform, false);
+        Instance.imgPauseProgress.rectTransform.localPosition = new Vector2(-616f, -334f);
+        Instance.imgPauseProgress.rectTransform.localScale = new Vector2(0.3f, 0.3f);
+
+        Instance.imgPauseIcon = new GameObject("imgPauseIcon").AddComponent<Image>();
+        Instance.imgPauseIcon.sprite = Instance.spritePauseIcon;
+        Instance.imgPauseIcon.color = new Color(1f, 1f, 1f, 1f);
+        Instance.imgPauseIcon.rectTransform.SetParent(Instance.imgPauseProgress.rectTransform, false);
+        Instance.imgPauseIcon.rectTransform.localPosition = new Vector2(0f, 0f);
+        Instance.imgPauseIcon.rectTransform.localScale = new Vector2(0.5f, 0.5f);
+        
+        Instance.imgPauseProgress.fillAmount = 0f;
+        Instance.imgPauseIcon.enabled = false;
     }
 
     // void GameStatesGame::UpdateState
@@ -147,15 +219,34 @@ public class Plugin : BaseUnityPlugin
         if (!Instance.pauseAllowed) return;
         
         bool shouldPause = false;
+        int maxPausePlayer = -1;
+        float maxPauseTime = 0f;
         for (int playerNr = 0; playerNr < 4; playerNr++)
         {
             if (Instance.pauseTimers[playerNr] >= PauseHoldTime.Value / 1000f)
             {
                 Instance.pausePlayer = playerNr;
                 shouldPause = true;
-                break;
+            }
+
+            if (Instance.pauseTimers[playerNr] > maxPauseTime)
+            {
+                maxPausePlayer = playerNr;
+                maxPauseTime = Instance.pauseTimers[playerNr];
             }
         }
+
+        if (Instance.pausePlayer == -1 && maxPauseTime > 0f)
+        {
+            Instance.imgPauseProgress.fillAmount = maxPauseTime / (PauseHoldTime.Value / 1000f);
+            Instance.imgPauseIcon.enabled = true;
+        }
+        else
+        {
+            Instance.imgPauseProgress.fillAmount = 0f;
+            Instance.imgPauseIcon.enabled = false;
+        }
+        
         if (!shouldPause) return;
         
         Instance.ResetPauseTimers();
@@ -174,7 +265,6 @@ public class Plugin : BaseUnityPlugin
         lbPausePlayer.color = Color.white;
         lbPausePlayer.fontSize = 28;
         TextHandler.SetText(lbPausePlayer, Instance.pausePlayer != -1 ? $"P{Instance.pausePlayer+1} pause" : "");
-
         Instance.pausePlayer = -1;
     }
 }

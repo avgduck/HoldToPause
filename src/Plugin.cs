@@ -8,9 +8,12 @@ using HarmonyLib;
 using LLBML.Players;
 using LLBML.States;
 using LLBML.Utils;
+using LLGUI;
 using LLHandlers;
 using LLScreen;
+using TMPro;
 using UnityEngine;
+using Object = System.Object;
 
 namespace HoldToPause;
 
@@ -27,6 +30,7 @@ public class Plugin : BaseUnityPlugin
 
     private float[] pauseTimers;
     private bool pauseAllowed;
+    private int pausePlayer;
 
     private void Awake()
     {
@@ -38,8 +42,15 @@ public class Plugin : BaseUnityPlugin
             "Forces the pause button to be held down to prevent accidental pausing in tournament settings. Pause hold time is specified in milliseconds (1000ms = 1s) and must be greater than 0."
         ]);
 
+        pausePlayer = -1;
         pauseTimers = new float[4];
         Harmony harmony = Harmony.CreateAndPatchAll(typeof(Plugin));
+    }
+
+    private void Update()
+    {
+        //if (GameStates.GetCurrent() != GameState.GAME || !pauseAllowed) return;
+        LogGlobal.LogInfo($"pausePlayer {pausePlayer}, pauseTimers {PrintArray(pauseTimers)}");
     }
 
     private void ResetPauseTimers()
@@ -133,18 +144,37 @@ public class Plugin : BaseUnityPlugin
     [HarmonyPostfix]
     private static void ScreenGameHud_DoUpdate_Postfix()
     {
-        int pausePlayer = -1;
+        if (!Instance.pauseAllowed) return;
+        
+        bool shouldPause = false;
         for (int playerNr = 0; playerNr < 4; playerNr++)
         {
             if (Instance.pauseTimers[playerNr] >= PauseHoldTime.Value / 1000f)
             {
-                pausePlayer = playerNr;
+                Instance.pausePlayer = playerNr;
+                shouldPause = true;
                 break;
             }
         }
-
-        if (pausePlayer == -1) return;
+        if (!shouldPause) return;
+        
         Instance.ResetPauseTimers();
-        GameStates.Send(Msg.GAME_PAUSE, pausePlayer, -1);
+        GameStates.Send(Msg.GAME_PAUSE, Instance.pausePlayer, -1);
+    }
+
+    [HarmonyPatch(typeof(ScreenGamePause), nameof(ScreenGamePause.OnOpen))]
+    [HarmonyPostfix]
+    private static void ScreenGamePause_OnOpen_Postfix(ScreenGamePause __instance)
+    {
+        TMP_Text lbPausePlayer = GameObject.Instantiate(__instance.btResume, __instance.transform).GetComponent<TMP_Text>();
+        lbPausePlayer.gameObject.name = "lbPausePlayer";
+        GameObject.Destroy(lbPausePlayer.GetComponent<LLButton>());
+        lbPausePlayer.transform.localPosition = new Vector2(0f, 310f);
+        lbPausePlayer.transform.localScale = new Vector2(1f, 1f);
+        lbPausePlayer.color = Color.white;
+        lbPausePlayer.fontSize = 28;
+        TextHandler.SetText(lbPausePlayer, Instance.pausePlayer != -1 ? $"P{Instance.pausePlayer+1} pause" : "");
+
+        Instance.pausePlayer = -1;
     }
 }

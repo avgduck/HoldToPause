@@ -31,6 +31,14 @@ public class Plugin : BaseUnityPlugin
     internal static ManualLogSource LogGlobal { get; private set; }
     
     internal static ConfigEntry<int> PauseHoldTime { get; private set; }
+    internal static ConfigEntry<int> PauseDisplayMode { get; private set; }
+
+    private static Vector2[] pauseIndicatorPositions =
+    [
+        Vector2.zero,
+        new Vector2(-616f, -334f),
+        new Vector2(616f, -334f)
+    ];
 
     private float[] pauseTimers;
     private bool pauseAllowed;
@@ -46,8 +54,11 @@ public class Plugin : BaseUnityPlugin
         LogGlobal = Logger;
 
         PauseHoldTime = Instance.Config.Bind<int>("Settings", "PauseHoldTime", 3000, "The amount of time a player needs to hold the pause button to pause the game, in milliseconds (1000ms = 1s). Must be greater than 0");
+        PauseDisplayMode = Instance.Config.Bind<int>("Settings", "PauseDisplayMode", 1, new ConfigDescription("Display mode for the pause progress indicator. 1 = off, 2 = bottom left, 3 = bottom right", new AcceptableValueRange<int>(0, pauseIndicatorPositions.Length - 1)));
         ModDependenciesUtils.RegisterToModMenu(Instance.Info, [
-            "Forces the pause button to be held down to prevent accidental pausing in tournament settings. Pause hold time is specified in milliseconds (1000ms = 1s) and must be greater than 0."
+            "Forces the pause button to be held down to prevent accidental pausing in tournament settings.",
+            "Pause hold time is specified in milliseconds (1000ms = 1s) and must be greater than 0.",
+            "Pause display mode: 0 = off, 1 = bottom left, 2 = bottom right"
         ]);
 
         pausePlayer = -1;
@@ -98,12 +109,6 @@ public class Plugin : BaseUnityPlugin
         return tex;
     }
 
-    private void Update()
-    {
-        //if (GameStates.GetCurrent() != GameState.GAME || !pauseAllowed) return;
-        //LogGlobal.LogInfo($"pausePlayer {pausePlayer}, pauseTimers {PrintArray(pauseTimers)}");
-    }
-
     private void ResetPauseTimers()
     {
         for (int playerNr = 0; playerNr < 4; playerNr++)
@@ -140,7 +145,7 @@ public class Plugin : BaseUnityPlugin
         Instance.imgPauseProgress.fillClockwise = true;
         Instance.imgPauseProgress.fillOrigin = (int)Image.Origin360.Top;
         Instance.imgPauseProgress.rectTransform.SetParent(__instance.transform, false);
-        Instance.imgPauseProgress.rectTransform.localPosition = new Vector2(-616f, -334f);
+        Instance.imgPauseProgress.rectTransform.localPosition = pauseIndicatorPositions[PauseDisplayMode.Value];
         Instance.imgPauseProgress.rectTransform.localScale = new Vector2(0.3f, 0.3f);
 
         Instance.imgPauseIcon = new GameObject("imgPauseIcon").AddComponent<Image>();
@@ -236,7 +241,8 @@ public class Plugin : BaseUnityPlugin
             }
         }
 
-        if (Instance.pausePlayer == -1 && maxPauseTime > 0f)
+        Instance.imgPauseProgress.rectTransform.localPosition = pauseIndicatorPositions[PauseDisplayMode.Value];
+        if (Instance.pausePlayer == -1 && maxPauseTime > 0f && PauseDisplayMode.Value != 0)
         {
             Instance.imgPauseProgress.fillAmount = maxPauseTime / (PauseHoldTime.Value / 1000f);
             Instance.imgPauseIcon.enabled = true;

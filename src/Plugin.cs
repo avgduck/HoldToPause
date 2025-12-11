@@ -53,7 +53,7 @@ public class Plugin : BaseUnityPlugin
         Instance = this;
         LogGlobal = Logger;
 
-        PauseHoldTime = Instance.Config.Bind<int>("Settings", "PauseHoldTime", 3000, "The amount of time a player needs to hold the pause button to pause the game, in milliseconds (1000ms = 1s). Must be greater than 0");
+        PauseHoldTime = Instance.Config.Bind<int>("Settings", "PauseHoldTime", 1000, "The amount of time a player needs to hold the pause button to pause the game, in milliseconds (1000ms = 1s). Must be greater than 0");
         PauseDisplayMode = Instance.Config.Bind<int>("Settings", "PauseDisplayMode", 1, new ConfigDescription("Display mode for the pause progress indicator. 1 = off, 2 = bottom left, 3 = bottom right", new AcceptableValueRange<int>(0, pauseIndicatorPositions.Length - 1)));
         ModDependenciesUtils.RegisterToModMenu(Instance.Info, [
             "Forces the pause button to be held down to prevent accidental pausing in tournament settings.",
@@ -177,12 +177,12 @@ public class Plugin : BaseUnityPlugin
          * match
          *  for (int j = 0; j < 4; j++) {
          *      Player player = Player.Get(j);
+         *      ** MATCH FROM HERE
          *      if (player.controller.GetButtonDown(InputAction.PAUSE)) {
-         *          MATCH FROM HERE
          *          GameStates.Send(Msg.GAME_PAUSE, j, -1);
          *          break;
-         *          TO HERE
          *      }
+         *      ** TO HERE
          *  }
          */
         cm.MatchBack(false,

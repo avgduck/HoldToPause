@@ -1,6 +1,6 @@
 {
   "name": "HoldToPause",
-  "version_number": "1.0.0",
+  "version_number": "1.0.1",
   "website_url": "https://github.com/avgduck/HoldToPause",
   "description": "Adds a hold timer to the pause button to prevent accidental pausing",
   "dependencies": [

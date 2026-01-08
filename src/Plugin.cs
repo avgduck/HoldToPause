@@ -9,6 +9,7 @@ using BepInEx.Logging;
 using HarmonyLib;
 using LLBML.Bundles;
 using LLBML.Players;
+using LLBML.Settings;
 using LLBML.States;
 using LLBML.Utils;
 using LLGUI;
@@ -32,6 +33,7 @@ public class Plugin : BaseUnityPlugin
     
     internal static ConfigEntry<int> PauseHoldTime { get; private set; }
     internal static ConfigEntry<int> PauseDisplayMode { get; private set; }
+    internal static ConfigEntry<bool> ActiveInTrainingMode { get; private set; }
 
     private static Vector2[] pauseIndicatorPositions =
     [
@@ -55,6 +57,7 @@ public class Plugin : BaseUnityPlugin
 
         PauseHoldTime = Instance.Config.Bind<int>("Settings", "PauseHoldTime", 1000, "The amount of time a player needs to hold the pause button to pause the game, in milliseconds (1000ms = 1s). Must be greater than 0");
         PauseDisplayMode = Instance.Config.Bind<int>("Settings", "PauseDisplayMode", 1, new ConfigDescription("Display mode for the pause progress indicator. 1 = off, 2 = bottom left, 3 = bottom right", new AcceptableValueRange<int>(0, pauseIndicatorPositions.Length - 1)));
+        ActiveInTrainingMode = Instance.Config.Bind<bool>("Settings", "ActiveInTrainingMode", false, new ConfigDescription("Whether hold to pause should be active in training mode"));
         ModDependenciesUtils.RegisterToModMenu(Instance.Info, [
             "Forces the pause button to be held down to prevent accidental pausing in tournament settings.",
             "Pause hold time is specified in milliseconds (1000ms = 1s) and must be greater than 0.",
@@ -204,6 +207,14 @@ public class Plugin : BaseUnityPlugin
             Transpilers.EmitDelegate<Action<ALDOKEMAOMB>>((p) =>
             {
                 Player player = (Player)p;
+                
+                if (GameSettings.current.gameMode is GameMode.TRAINING && !ActiveInTrainingMode.Value)
+                {
+                    Instance.pausePlayer = -1;
+                    if (player.controller.GetButton(InputAction.PAUSE)) GameStates.Send(Msg.GAME_PAUSE, player.nr, -1);
+                    return;
+                }
+                
                 if (Instance.pauseAllowed && player.controller.GetButton(InputAction.PAUSE))
                 {
                     Instance.pauseTimers[player.nr] += Time.deltaTime;

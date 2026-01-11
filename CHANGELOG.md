@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.1.1] - 2026-01-11
+
+### Fixed
+
+- Fix instantly repausing when unpausing from the pause input in training mode ([`916a570`](https://github.com/avgduck/HoldToPause/commit/916a57005248f49e3fe4409a201c5fcd05a3e999))
+
 ## [1.1.0] - 2026-01-08
 
 ### Added
@@ -16,6 +22,7 @@
 
 _Initial release_
 
+[1.1.1]: https://github.com/avgduck/HoldToPause/releases/tag/v1.1.1
 [1.1.0]: https://github.com/avgduck/HoldToPause/releases/tag/v1.1.0
 [1.0.1]: https://github.com/avgduck/HoldToPause/releases/tag/v1.0.1
 [1.0.0]: https://github.com/avgduck/HoldToPause/releases/tag/v1.0.0

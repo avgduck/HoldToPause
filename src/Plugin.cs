@@ -211,7 +211,7 @@ public class Plugin : BaseUnityPlugin
                 if (GameSettings.current.gameMode is GameMode.TRAINING && !ActiveInTrainingMode.Value)
                 {
                     Instance.pausePlayer = -1;
-                    if (player.controller.GetButton(InputAction.PAUSE)) GameStates.Send(Msg.GAME_PAUSE, player.nr, -1);
+                    if (player.controller.GetButtonDown(InputAction.PAUSE)) GameStates.Send(Msg.GAME_PAUSE, player.nr, -1);
                     return;
                 }
                 
